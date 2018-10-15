@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset=utf-8 />
+  <title>US Power Plants</title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.3/dist/leaflet.css" />
+  <link href='http://fonts.googleapis.com/css?family=Lato' rel='stylesheet' type='text/css'>
+
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: whitesmoke;
+      font-family: Lato, sans-serif;
+      color: #0D0000;
+    }
+
+    header {
+      padding: 6px 10%;
+    }
+
+    h1 {
+      display: inline-block;
+      margin-right: 20px;
+      color: whitesmoke;
+    }
+
+    h2 {
+      display: inline-block;
+      color: #001323;
+    }
+
+    #map {
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      width: 100%;
+      height: 1080px;
+      z-index: 1
+    }
+
+    footer {
+      padding: 6px 10%;
+      width: 80%;
+    }
+
+    p {
+      font-size: 0.8em;
+      color: whitesmoke;
+    }
+
+    #wrapper {
+      position: absolute;
+      z-index: 3;
+      left: 100px;
+    }
+
+    #overMap {
+      position: absolute;
+      bottom: 10px;
+      left: 20px;
+      margin: 10px auto;
+      z-index: 2;
+    }
+
+    }
+  </style>
+</head>
+
+<body>
+  <div id="wrapper">
+    <h1>Multi-tasking Power Generation</h1>
+  </div>
+
+  <div id="overMap">
+    <p>Information on each factory was provided as part of the New Maps Plus MAP 672 Week 7 Lab. </p>
+    <p>See my projects on GitHub: <a href="https://github.com/jeremy-deischer">Jeremy Deischer</a></p>
+    <p>Follow me on Twitter: <a href="https://twitter.com/JeremyDeischer">@JeremyDeischer</a></p>
+  </div>
+  <div id="map"></div>
+
+  </header>
+  <footer>
+  </footer>
+
+  <script src="https://unpkg.com/leaflet@1.3.3/dist/leaflet.js"></script>
+  <script src="data/power-plants.js"></script>
+  <script>
+    var map = L.map('map', {
+      center: [36, -94],
+      zoom: 4,
+    });
+
+    var tiles = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/rastertiles/dark_all/{z}/{x}/{y}.png', {
+      attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a>',
+      subdomains: 'abcd',
+      maxZoom: 19
+    });
+
+    tiles.addTo(map);
+
+    //sort symbols so larger objects rest undeneath smaller ones
+    plants.features.sort(function(a, b) {
+      return b.properties.capacity_mw - a.properties.capacity_mw;
+    });
+
+    L.geoJson(plants, {
+      pointToLayer: function(feature, latlng) {
+        return L.circleMarker(latlng, {
+          weight: 1,
+          stroke: false,
+          fillOpacity: .8,
+          radius: getRadius(feature.properties.capacity_mw)
+        });
+      },
+      // Filter features to only show factories with multiple fuel source
+      filter: function(feature) {
+        //Declare variable that represents length of keys for fuel source to determine if there are more than 1
+        var numOfSources = Object.keys(feature.properties.fuel_source).length;
+        //Only return facilities that have two power sources
+        if (numOfSources > 1) {
+          return feature;
+        }
+      },
+      onEachFeature: function(feature, layer) {
+
+        //Assigning color to each symbol
+        if (feature.properties.fuel_source.Coal) {
+          layer.setStyle({
+            fillColor: 'red',
+            radius: getRadius(feature.properties.fuel_source.Coal)
+          });
+        } else if (feature.properties.fuel_source.Hydro) {
+          layer.setStyle({
+            fillColor: 'blue',
+            radius: getRadius(feature.properties.fuel_source.Hydro)
+          });
+        } else if (feature.properties.fuel_source['Natural Gas']) {
+          layer.setStyle({
+            fillColor: 'orange',
+            radius: getRadius(feature.properties.fuel_source['Natural Gas'])
+          });
+        } else if (feature.properties.fuel_source.Solar) {
+          layer.setStyle({
+            fillColor: 'yellow',
+            radius: getRadius(feature.properties.fuel_source.Solar)
+          });
+        }
+
+        //create powerPlantTooltip.  Add name and plant capacity to tool tip
+        var powerPlantTooltip = '<b>' + feature.properties.plant_name + '</b> <br>' +
+          feature.properties.capacity_mw + ' MW' + '<br>';
+
+        //Iterate through each fuel source.  Add fuel source and capacity of each fuel source to tooltip
+        for (var source in feature.properties.fuel_source) {
+          powerPlantTooltip += '<b>' + source + ': </b> ' + feature.properties.fuel_source[source] + ' MW <br>';
+        }
+        //bind popup to mouse over event
+        layer.bindTooltip(powerPlantTooltip);
+      }
+    }).addTo(map);
+
+
+    var commonStyles = {
+      weight: 1,
+      stroke: 1,
+      fillOpacity: .8
+    }
+
+    //Function is called in L.geoJson and scales the radius
+    function getRadius(area) {
+      var radius = Math.sqrt(area / Math.PI);
+      return radius * .6;
+    };
+  </script>
+
+</body>
+
+</html>
